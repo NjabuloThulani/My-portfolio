@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Health - Facility Command Center Dashboard</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+    body { background-color: #0f172a; color: #f8fafc; padding: 20px; min-height: 100vh; }
+
+    /* HEADER */
+    header { background: #1b365d; border-radius: 16px; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; margin-bottom: 20px; }
+    .brand-title { font-size: 20px; font-weight: 800; color: #00a896; display: flex; align-items: center; gap: 8px; }
+    .facility-badge { background: #00a896; color: white; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: uppercase; }
+    .sys-status { display: flex; align-items: center; gap: 16px; font-size: 12px; color: #94a3b8; font-weight: bold; }
+    .status-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px #22c55e; }
+
+    /* METRIC CARDS TOP ROW */
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .metric-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 18px; position: relative; }
+    .metric-card.alert-border { border-color: #f87171; background: #2d1a24; }
+    .metric-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; }
+    .metric-val { font-size: 32px; font-weight: 900; color: #ffffff; }
+    .metric-sub { font-size: 11px; color: #64748b; margin-top: 4px; font-weight: bold; }
+
+    /* DASHBOARD MAIN LAYOUT */
+    .dashboard-layout { display: grid; grid-template-columns: 2.2fr 1fr; gap: 20px; }
+    @media (max-width: 1024px) { .dashboard-layout { grid-template-columns: 1fr; } }
+
+    /* LEFT COLUMN: ACTIVE QUEUE TABLE */
+    .panel { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .panel-title { font-size: 16px; font-weight: 800; color: #f8fafc; }
+
+    /* FILTER TABS */
+    .filter-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab-btn { background: #0f172a; color: #94a3b8; border: 1px solid #334155; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .tab-btn:hover, .tab-btn.active { background: #00a896; color: white; border-color: #00a896; }
+
+    /* QUEUE TABLE */
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; padding: 12px; border-bottom: 1px solid #334155; background: #0f172a; }
+    td { font-size: 13px; padding: 12px; border-bottom: 1px solid #334155; color: #cbd5e1; }
+    tr:hover td { background: #26334d; }
+
+    .badge { padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; display: inline-block; text-transform: uppercase; }
+    .badge-meds { background: #dcfce7; color: #166534; }
+    .badge-consult { background: #dbeafe; color: #1e40af; }
+    .badge-hts { background: #f5f3ff; color: #6d28d9; }
+    .badge-stat { background: #fee2e2; color: #991b1b; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    .btn-action { background: #00a896; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; margin-right: 4px; }
+    .btn-action:hover { background: #028073; }
+    .btn-secondary { background: #334155; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
+
+    /* RIGHT COLUMN PANELS */
+    .sidebar-section { display: flex; flex-direction: column; gap: 20px; }
+
+    /* PHARMACY INVENTORY BARS */
+    .stock-item { margin-bottom: 12px; }
+    .stock-info { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+    .progress-bar { width: 100%; height: 8px; background: #0f172a; border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #00a896; border-radius: 4px; }
+    .progress-fill.low { background: #ef4444; }
+
+    /* MOBILITY BREAKDOWN CARD */
+    .mobility-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 12px; margin-top: 8px; }
+    .mobility-row { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px dashed #334155; }
+    .mobility-row:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div>
+      <div class="brand-title">
+        🏥 Verify Health 
+        <span class="facility-badge">Facility Command Center</span>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Motherwell Clinic • Eastern Cape Region (Cluster 4)</div>
+    </div>
+    <div class="sys-status">
+      <div><span class="status-dot"></span> Live Kiosk & USSD Sync</div>
+      <div id="liveClock" style="color: #ffffff;">14:32:05</div>
+    </div>
+  </header>
+
+  <!-- TOP METRICS ROW -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-label">Active Waiting Queue</div>
+      <div class="metric-val" id="totalQueueCount">24</div>
+      <div class="metric-sub"> Across 3 Station Benches</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-label">Average Wait Time</div>
+      <div class="metric-val" style="color: #22c55e;">14m</div>
+      <div class="metric-sub"> Target: &lt; 20m per patient</div>
+    </div>
+
+    <div class="metric-card alert-border">
+      <div class="metric-label" style="color: #f87171;">🚨 STAT Emergency Flags</div>
+      <div class="metric-val" style="color: #f87171;" id="statAlertCount">1</div>
+      <div class="metric-sub" style="color: #fca5a5;">Critical BP/Glucose Override</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-label">Guest / Inter-District</div>
+      <div class="metric-val" style="color: #38bdf8;">14</div>
+      <div class="metric-sub">Gauteng & KZN Pickups Today</div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD MAIN CONTENT -->
+  <div class="dashboard-layout">
+
+    <!-- LEFT PANEL: REAL-TIME QUEUE TABLE -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 Live Patient Queue & Triage Desk</div>
+        <button class="btn-action" onclick="addDemoPatient()">+ Manual Walk-in Check-in</button>
+      </div>
+
+      <!-- FILTER TABS -->
+      <div class="filter-tabs">
+        <button class="tab-btn active" onclick="filterQueue('all', this)">All Patients (24)</button>
+        <button class="tab-btn" onclick="filterQueue('P', this)">💊 Express Meds (8)</button>
+        <button class="tab-btn" onclick="filterQueue('C', this)">🩺 Doctor Consults (11)</button>
+        <button class="tab-btn" onclick="filterQueue('H', this)">🧪 HTS Counseling (4)</button>
+        <button class="tab-btn" onclick="filterQueue('EM', this)">🚨 STAT Emergency (1)</button>
+      </div>
+
+      <!-- QUEUE TABLE -->
+      <table>
+        <thead>
+          <tr>
+            <th>Ticket #</th>
+            <th>Patient Name</th>
+            <th>Service Type</th>
+            <th>Vitals Status</th>
+            <th>Wait Time</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="queueTableBody">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- RIGHT PANEL: OPERATIONAL ANALYTICS -->
+    <div class="sidebar-section">
+
+      <!-- PHARMACY STOCK MONITORING -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">💊 Express Pharmacy Stock</div>
+        </div>
+
+        <div class="stock-item">
+          <div class="stock-info">
+            <span>Amlodipine 10mg</span>
+            <span style="color: #22c55e;">88% (Healthy)</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 88%;"></div></div>
+        </div>
+
+        <div class="stock-item">
+          <div class="stock-info">
+            <span>Metformin 500mg</span>
+            <span style="color: #22c55e;">92% (Healthy)</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 92%;"></div></div>
+        </div>
+
+        <div class="stock-item">
+          <div class="stock-info">
+            <span>ARV Regimen 1 (TLD)</span>
+            <span style="color: #22c55e;">95% (Healthy)</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 95%;"></div></div>
+        </div>
+
+        <div class="stock-item">
+          <div class="stock-info">
+            <span>Soluble Insulin 100IU</span>
+            <span style="color: #ef4444;">18% (Low Alert)</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill low" style="width: 18%;"></div></div>
+        </div>
+      </div>
+
+      <!-- INTER-PROVINCIAL MOBILITY MONITORING -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🧳 Inter-Provincial Mobility</div>
+        </div>
+        <p style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">Track out-of-district patients retrieving chronic medication locally.</p>
+
+        <div class="mobility-card">
+          <div class="mobility-row">
+            <span>Gauteng Clinics (Alexandra/Soweto)</span>
+            <strong style="color: #38bdf8;">9 Patients</strong>
+          </div>
+          <div class="mobility-row">
+            <span>KwaZulu-Natal (eThekwini)</span>
+            <strong style="color: #38bdf8;">5 Patients</strong>
+          </div>
+          <div class="mobility-row">
+            <span>Western Cape (Khayelitsha)</span>
+            <strong style="color: #38bdf8;">2 Patients</strong>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // INITIAL PATIENT QUEUE DATA
+    let queueData = [
+      { ticket: 'EM-01', name: 'Nomsa Dlamini', service: 'Emergency STAT', badgeClass: 'badge-stat', type: 'EM', vitals: '⚠️ BP 168/102 (Critical)', wait: '2m', origin: 'Motherwell' },
+      { ticket: 'P-104', name: 'Josephine Sentsho', service: 'Express Meds', badgeClass: 'badge-meds', type: 'P', vitals: 'Normal (120/80)', wait: '12m', origin: 'Alexandra (Guest)' },
+      { ticket: 'P-105', name: 'Siyabonga Ndlovu', service: 'Express Meds', badgeClass: 'badge-meds', type: 'P', vitals: 'Normal (124/82)', wait: '8m', origin: 'Motherwell' },
+      { ticket: 'C-205', name: 'Thabo Molefe', service: 'Doctor Consult', badgeClass: 'badge-consult', type: 'C', vitals: 'Elevated BP (138/88)', wait: '22m', origin: 'Motherwell' },
+      { ticket: 'H-301', name: 'Zanele Khumalo', service: 'HTS Counseling', badgeClass: 'badge-hts', type: 'H', vitals: 'Routine', wait: '5m', origin: 'Motherwell' },
+      { ticket: 'P-106', name: 'Kagiso Mokoena', service: 'Express Meds', badgeClass: 'badge-meds', type: 'P', vitals: 'Normal (118/76)', wait: '4m', origin: 'eThekwini (Guest)' }
+    ];
+
+    let currentFilter = 'all';
+
+    function renderQueue() {
+      const tbody = document.getElementById('queueTableBody');
+      tbody.innerHTML = '';
+
+      const filtered = queueData.filter(p => currentFilter === 'all' || p.type === currentFilter);
+
+      filtered.forEach((patient, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td style="font-weight: bold; color: #ffffff;">${patient.ticket}</td>
+          <td>
+            <strong>${patient.name}</strong><br>
+            <span style="font-size: 10px; color: #64748b;">${patient.origin}</span>
+          </td>
+          <td><span class="badge ${patient.badgeClass}">${patient.service}</span></td>
+          <td style="font-size: 12px;">${patient.vitals}</td>
+          <td style="font-weight: bold; color: #38bdf8;">${patient.wait}</td>
+          <td>
+            <button class="btn-action" onclick="callPatient('${patient.ticket}')">Call</button>
+            <button class="btn-secondary" onclick="completePatient(${index})">Done</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      document.getElementById('totalQueueCount').innerText = queueData.length;
+      document.getElementById('statAlertCount').innerText = queueData.filter(p => p.type === 'EM').length;
+    }
+
+    function filterQueue(type, btnElem) {
+      currentFilter = type;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      btnElem.classList.add('active');
+      renderQueue();
+    }
+
+    function callPatient(ticket) {
+      alert(`📢 Calling Patient Ticket ${ticket} to Station Window!`);
+    }
+
+    function completePatient(index) {
+      queueData.splice(index, 1);
+      renderQueue();
+    }
+
+    function addDemoPatient() {
+      const nextNum = Math.floor(100 + Math.random() * 900);
+      queueData.push({
+        ticket: `P-${nextNum}`,
+        name: 'New Walk-in Patient',
+        service: 'Express Meds',
+        badgeClass: 'badge-meds',
+        type: 'P',
+        vitals: 'Normal (122/80)',
+        wait: '1m',
+        origin: 'Motherwell'
+      });
+      renderQueue();
+    }
+
+    // LIVE CLOCK SCRIPT
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('liveClock').innerText = now.toLocaleTimeString();
+    }, 1000);
+
+    // INITIAL RENDER
+    renderQueue();
+  </script>
+</body>
+</html>
