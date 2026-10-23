@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Health - Dual Device Simulator</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+    body { background-color: #0f172a; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; gap: 40px; flex-wrap: wrap; }
+    
+    .device-title { text-align: center; color: #94a3b8; font-size: 13px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+
+    /* SMARTPHONE CONTAINER */
+    .phone-container { width: 375px; height: 820px; background: #ffffff; border-radius: 40px; border: 12px solid #1e293b; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); position: relative; overflow: hidden; display: flex; flex-direction: column; }
+    .camera-notch { width: 140px; height: 24px; background: #1e293b; position: absolute; top: 0; left: 50%; transform: translateX(-50%); border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; z-index: 100; }
+    
+    .app-header { background: #1b365d; color: white; padding: 36px 20px 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .app-title { font-size: 18px; font-weight: 700; color: #00a896; }
+    .status-badge { background: #00a896; color: white; font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 12px; text-transform: uppercase; }
+
+    /* NAVIGATION BAR FOR BACK BUTTON */
+    .top-nav { display: flex; align-items: center; margin-bottom: 12px; }
+    .back-btn { background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; font-size: 12px; font-weight: bold; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+    .back-btn:hover { background: #e2e8f0; }
+
+    /* FEATURE PHONE CONTAINER (NOKIA / T9) */
+    .feature-phone { width: 300px; height: 600px; background: #334155; border-radius: 28px; border: 8px solid #1e293b; padding: 16px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+    .feature-screen { width: 100%; height: 260px; background: #000000; border: 4px solid #475569; border-radius: 8px; padding: 12px; color: #22c55e; font-family: 'Courier New', Courier, monospace; font-size: 12px; overflow-y: auto; display: flex; flex-direction: column; justify-content: space-between; }
+    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; width: 100%; }
+    .key-btn { background: #1e293b; color: white; border: 1px solid #475569; border-radius: 8px; padding: 10px 0; font-weight: bold; font-size: 12px; text-align: center; cursor: pointer; }
+    .key-btn:active { background: #00a896; }
+
+    .screen { display: none; flex: 1; flex-direction: column; padding: 20px; overflow-y: auto; }
+    .screen.active { display: flex; }
+
+    /* GEOFENCE & BANNERS */
+    .geo-banner { background: #ecfdf5; border: 1px solid #10b981; color: #047857; padding: 8px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .location-banner { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; margin-bottom: 16px; text-align: center; }
+    .visitor-banner { background: #eff6ff; color: #1e40af; border: 1px solid #3b82f6; padding: 10px; border-radius: 8px; font-size: 11px; font-weight: bold; margin-bottom: 12px; }
+    .role-banner { background: #ebf3fa; color: #1b365d; border-left: 4px solid #00a896; padding: 8px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 12px; }
+    .priority-tag { background: #fef2f2; color: #991b1b; border: 1px solid #f87171; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-bottom: 10px; }
+
+    .option-card { background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 16px; padding: 14px; margin-bottom: 10px; cursor: pointer; text-align: left; position: relative; }
+    .option-card:hover { border-color: #00a896; background: #f0fdf4; }
+    .option-title { font-size: 15px; font-weight: bold; color: #1b365d; margin-bottom: 2px; }
+    .option-desc { font-size: 12px; color: #64748b; }
+
+    .stock-badge { position: absolute; top: 12px; right: 12px; background: #dcfce7; color: #166534; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 8px; }
+
+    .scan-btn { background: #00a896; color: white; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 14px; cursor: pointer; width: 100%; margin-bottom: 10px; }
+    
+    .vitals-label { font-size: 12px; font-weight: bold; color: #1e293b; margin-top: 8px; margin-bottom: 4px; display: block; }
+    .vitals-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; margin-bottom: 10px; font-weight: bold; }
+    
+    .ticket-card { background: #ffffff; border: 2px solid #00a896; border-radius: 20px; padding: 16px; text-align: center; }
+    .ticket-num { font-size: 40px; font-weight: 900; color: #1b365d; margin: 4px 0; }
+
+    .nav-card { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 16px; padding: 14px; margin-bottom: 14px; }
+    .step-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; font-size: 13px; color: #1e293b; }
+    .step-number { background: #1b365d; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; flex-shrink: 0; }
+
+    .wait-time-box { background: #f0fdf4; border: 2px solid #00a896; border-radius: 14px; padding: 10px; margin: 10px 0; display: flex; justify-content: space-around; align-items: center; }
+    .wait-stat { text-align: center; }
+    .wait-val { font-size: 20px; font-weight: 900; color: #1b365d; }
+    .wait-label { font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase; }
+
+    /* MEDICATION & APPOINTMENT INSTRUCTIONS BOX */
+    .med-instructions-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 10px; margin-top: 10px; text-align: left; }
+    .med-item { font-size: 11px; color: #334155; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #e2e8f0; }
+    .med-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .appointment-badge { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 11px; font-weight: bold; padding: 8px; border-radius: 8px; margin-top: 8px; text-align: center; }
+
+    .sms-banner { background: #1e293b; color: #ffffff; border-radius: 12px; padding: 10px; font-size: 11px; margin-top: 10px; text-align: left; border-left: 4px solid #38bdf8; }
+  </style>
+</head>
+<body>
+
+<!-- LEFT DEVICE: SMARTPHONE & KIOSK SIMULATOR -->
+<div>
+  <div class="device-title">📱 Kiosk & Smartphone Interface</div>
+  <div class="phone-container">
+    <div class="camera-notch"></div>
+
+    <div class="app-header">
+      <div>
+        <div class="app-title">Verify Health</div>
+        <div style="font-size: 10px; color: #cbd5e1;">Clinic Kiosk & Emergency Router</div>
+      </div>
+      <span class="status-badge">Clinic Online</span>
+    </div>
+
+    <!-- SCREEN 1: ENTRANCE CHECK-IN -->
+    <div id="screen1" class="screen active">
+      <div class="geo-banner">
+        📍 Location Verified: Within Clinic Zone (35m)
+      </div>
+      <div class="location-banner">Motherwell Clinic • Eastern Cape</div>
+
+      <button class="scan-btn" onclick="checkInPatient(false)">🎴 Scan Plastic QR Card (Local Patient)</button>
+
+      <button class="scan-btn" style="background: #1b365d;" onclick="checkInPatient(true)">🧳 Scan Plastic QR Card (Visitor Patient)</button>
+
+      <div style="text-align: center; margin-top: 14px; font-size: 11px; color: #94a3b8; font-weight: bold;">OR USE FEATURE PHONE (USSD) ON RIGHT ➔</div>
+    </div>
+
+    <!-- SCREEN 1A: INTER-PROVINCIAL MOBILITY WARNING (VISITORS ONLY) -->
+    <div id="screenMobilityCheck" class="screen">
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <div class="visitor-banner">
+        ⚠️ <strong>Notice: Out-of-District Patient Detected</strong><br>
+        Patient: <strong>Josephine Sentsho</strong><br>
+        Registered Home: <strong>Alexandra Clinic (Gauteng)</strong>
+      </div>
+
+      <h3 style="color: #1b365d; margin-bottom: 4px;">Confirm Visit Type</h3>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 14px;">Please select your status at Motherwell Clinic:</p>
+
+      <div class="option-card" onclick="selectMobilityType('guest')">
+        <div class="option-title">🧳 Temporary Guest Pickup</div>
+        <div class="option-desc">Visiting for &lt; 2 months. Authorizes guest chronic dispensing.</div>
+      </div>
+
+      <div class="option-card" onclick="selectMobilityType('transfer')">
+        <div class="option-title">🏡 Permanent Clinic Transfer</div>
+        <div class="option-desc">Relocated permanently to Eastern Cape. Migrates central record.</div>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: SERVICE SELECTION -->
+    <div id="screen2" class="screen">
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <h3 style="color: #1b365d; margin-bottom: 2px;">Select Service Needed</h3>
+      <p id="patientSub" style="font-size: 12px; color: #64748b; margin-bottom: 6px;">Josephine Sentsho • Registered Patient</p>
+      
+      <div id="mobilityBadge" style="display: none; font-size: 11px; font-weight: bold; color: #1e40af; background: #dbeafe; padding: 4px 8px; border-radius: 6px; margin-bottom: 8px; width: fit-content;">
+        🧳 Guest Pickup Authorized
+      </div>
+
+      <div class="priority-tag">⭐ Priority Care: Senior Patient (Age 64)</div>
+
+      <div class="option-card" onclick="goToScreen('screenNavMeds')">
+        <span class="stock-badge">🟢 Stock Ready</span>
+        <div class="option-title">💊 Medication Collection</div>
+        <div class="option-desc">Fast-track chronic repeat pickup. Directs to Express Bench.</div>
+      </div>
+
+      <div class="option-card" onclick="goToScreen('screenNavConsult')">
+        <div class="option-title">🩺 Doctor Consultation</div>
+        <div class="option-desc">Unwell / Routine review. Directs to Consultation Triage.</div>
+      </div>
+
+      <div class="option-card" onclick="goToScreen('ticketHIV')">
+        <div class="option-title">🧪 HIV Testing & Counseling</div>
+        <div class="option-desc">Direct referral to confidential HTS room.</div>
+      </div>
+    </div>
+
+    <!-- SCREEN 2A: DIRECTION TO EXPRESS VITALS -->
+    <div id="screenNavMeds" class="screen">
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <h3 style="color: #1b365d; margin-bottom: 4px;">🧭 Directions to Station</h3>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Destination: <strong>Express Vitals Bench (Room 12)</strong></p>
+
+      <div class="nav-card">
+        <div class="step-item">
+          <div class="step-number">1</div>
+          <div>Walk straight down the main lobby hallway.</div>
+        </div>
+        <div class="step-item">
+          <div class="step-number">2</div>
+          <div>Follow the <strong>GREEN floor line</strong> to Corridor B.</div>
+        </div>
+        <div class="step-item">
+          <div class="step-number">3</div>
+          <div>Have a seat at <strong>Bench 12</strong>.</div>
+        </div>
+      </div>
+
+      <button class="scan-btn" onclick="goToScreen('screenMedsVitals')">Arrived at Station (Nurse Login)</button>
+    </div>
+
+    <!-- SCREEN 2B: DIRECTION TO CONSULT TRIAGE -->
+    <div id="screenNavConsult" class="screen">
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <h3 style="color: #1b365d; margin-bottom: 4px;">🧭 Directions to Station</h3>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Destination: <strong>Consultation Triage (Room 4)</strong></p>
+
+      <div class="nav-card" style="border-color: #3b82f6; background: #eff6ff;">
+        <div class="step-item"><div class="step-number">1</div><div>Turn left at reception.</div></div>
+        <div class="step-item"><div class="step-number">2</div><div>Follow the <strong>BLUE line</strong> to Room 4.</div></div>
+      </div>
+
+      <button class="scan-btn" style="background: #1b365d;" onclick="goToScreen('screenConsultVitals')">Arrived at Station (Nurse Login)</button>
+    </div>
+
+    <!-- SCREEN 3A: NURSE VITALS (BP + GLUCOSE) -->
+    <div id="screenMedsVitals" class="screen">
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <div class="role-banner">🩺 NURSE WORKSTATION ONLY</div>
+      <h3 style="color: #1b365d; margin-bottom: 4px;">Record Station Vitals</h3>
+      <p style="font-size: 11px; color: #64748b; margin-bottom: 12px;">Measurements required to authorize medication dispensing.</p>
+
+      <span class="vitals-label">1. Blood Pressure (mmHg)</span>
+      <input type="text" id="nurseBP" class="vitals-input" value="120/80">
+
+      <span class="vitals-label">2. Blood Glucose (mmol/L)</span>
+      <input type="text" id="nurseGlucose" class="vitals-input" value="6.2">
+
+      <div style="font-size: 11px; color: #64748b; margin-bottom: 12px;">
+        💡 <em>Test Emergency Triggers:</em> Set BP $\ge 160$ OR Glucose $\ge 11.1$ to simulate emergency escalation.
+      </div>
+
+      <button class="scan-btn" onclick="submitNurseVitals()">Submit Vitals & Issue Queue Ticket</button>
+    </div>
+
+    <!-- SCREEN 3B: CONSULT VITALS -->
+    <div id="screenConsultVitals" class="screen">
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <div class="role-banner">🩺 NURSE WORKSTATION ONLY</div>
+      <h3 style="color: #1b365d; margin-bottom: 4px;">Consult Triage Vitals</h3>
+      
+      <span class="vitals-label">1. Blood Pressure (mmHg)</span>
+      <input type="text" class="vitals-input" value="135/88">
+
+      <span class="vitals-label">2. Blood Glucose (mmol/L)</span>
+      <input type="text" class="vitals-input" value="7.1">
+
+      <button class="scan-btn" onclick="goToScreen('ticketConsult')" style="background: #1b365d;">Assign Doctor Queue Ticket</button>
+    </div>
+
+    <!-- TICKET 1: EXPRESS PHARMACY WITH INSTRUCTIONS & NEXT APPOINTMENT -->
+    <div id="ticketMeds" class="screen">
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <div class="ticket-card">
+        <span style="font-size: 11px; font-weight: 700; color: #166534; background: #dcfce7; padding: 4px 10px; border-radius: 12px;">✓ Approved • Express Window 2</span>
+        <div class="ticket-num">P-104</div>
+
+        <!-- ESTIMATED WAIT TIME & QUEUE POSITION -->
+        <div class="wait-time-box">
+          <div class="wait-stat">
+            <div class="wait-val">~12m</div>
+            <div class="wait-label">Est. Wait Time</div>
+          </div>
+          <div style="border-right: 1px solid #cbd5e1; height: 26px;"></div>
+          <div class="wait-stat">
+            <div class="wait-val" style="color: #00a896;">3</div>
+            <div class="wait-label">Patients Ahead</div>
+          </div>
+        </div>
+
+        <!-- MEDICATION DOSAGE INSTRUCTIONS -->
+        <div class="med-instructions-box">
+          <div style="font-size: 11px; font-weight: bold; color: #1b365d; margin-bottom: 6px;">💊 Prescribed Medication & Usage:</div>
+          <div class="med-item">
+            <strong>Amlodipine 10mg</strong> — 1 tablet daily in the morning after meals.
+          </div>
+          <div class="med-item">
+            <strong>Metformin 500mg</strong> — 1 tablet twice daily with breakfast and dinner.
+          </div>
+
+          <!-- NEXT APPOINTMENT DATE -->
+          <div class="appointment-badge">
+            📅 <strong>Next Repeat Pickup:</strong> 12 September 2026
+          </div>
+        </div>
+
+        <div class="sms-banner">
+          💬 <strong>SMS Scheduled:</strong> Instructions & appointment date will be sent to your phone via SMS.
+        </div>
+      </div>
+      <button class="scan-btn" onclick="resetToStart()" style="margin-top: 12px;">Done / Next Patient</button>
+    </div>
+
+    <!-- TICKET 2: EMERGENCY OVERRIDE -->
+    <div id="ticketEmergency" class="screen">
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <div class="ticket-card" style="border-color: #dc2626; background: #fff5f5;">
+        <span style="font-size: 11px; font-weight: 700; color: #991b1b; background: #fef2f2; padding: 4px 10px; border-radius: 12px;">🚨 STAT Alert • Critical Vitals</span>
+        <div class="ticket-num" style="color: #dc2626;">EM-01</div>
+        <p style="font-size: 13px; font-weight: bold; color: #991b1b; margin-top: 6px;">Proceed immediately to Emergency Consult Room 1.</p>
+        <p style="font-size: 11px; color: #7f1d1d; margin-top: 4px;" id="emergencyReason">Flagged for high vitals threshold.</p>
+      </div>
+      <button class="scan-btn" onclick="resetToStart()" style="margin-top: 16px; background: #dc2626;">Done / Next Patient</button>
+    </div>
+
+    <!-- TICKET 3: CONSULTATION WITH WAIT TIME -->
+    <div id="ticketConsult" class="screen">
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <div class="ticket-card" style="border-color: #1b365d;">
+        <span style="font-size: 11px; font-weight: 700; color: #1e3a8a; background: #dbeafe; padding: 4px 10px; border-radius: 12px;">Doctor Consultation • Triage B</span>
+        <div class="ticket-num" style="color: #1b365d;">C-205</div>
+
+        <!-- ESTIMATED WAIT TIME & QUEUE POSITION -->
+        <div class="wait-time-box" style="border-color: #1b365d; background: #eff6ff;">
+          <div class="wait-stat">
+            <div class="wait-val" style="color: #1b365d;">~28m</div>
+            <div class="wait-label">Est. Wait Time</div>
+          </div>
+          <div style="border-right: 1px solid #cbd5e1; height: 26px;"></div>
+          <div class="wait-stat">
+            <div class="wait-val" style="color: #2563eb;">5</div>
+            <div class="wait-label">Patients Ahead</div>
+          </div>
+        </div>
+
+        <div class="sms-banner">
+          💬 <strong>SMS Scheduled:</strong> Pre-alert SMS will be sent when 2 patients remain.
+        </div>
+      </div>
+      <button class="scan-btn" onclick="resetToStart()" style="margin-top: 20px; background: #1b365d;">Done / Next Patient</button>
+    </div>
+
+    <!-- TICKET 4: HIV -->
+    <div id="ticketHIV" class="screen">
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <div class="ticket-card" style="border-color: #7c3aed;">
+        <div class="ticket-num" style="color: #7c3aed;">H-301</div>
+        <div class="wait-time-box" style="border-color: #7c3aed; background: #f5f3ff;">
+          <div class="wait-stat">
+            <div class="wait-val" style="color: #7c3aed;">~5m</div>
+            <div class="wait-label">Est. Wait Time</div>
+          </div>
+          <div style="border-right: 1px solid #cbd5e1; height: 26px;"></div>
+          <div class="wait-stat">
+            <div class="wait-val" style="color: #7c3aed;">1</div>
+            <div class="wait-label">Patient Ahead</div>
+          </div>
+        </div>
+        <p style="font-size: 12px; color: #64748b;">Proceed to Counseling Room 4</p>
+      </div>
+      <button class="scan-btn" onclick="resetToStart()" style="margin-top: 20px; background: #7c3aed;">Done / Next Patient</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- RIGHT DEVICE: FEATURE PHONE (USSD SIMULATOR) -->
+<div>
+  <div class="device-title">📟 Basic Feature Phone (USSD)</div>
+  <div class="feature-phone">
+    
+    <!-- MONOCHROME / GREEN USSD DISPLAY SCREEN -->
+    <div class="feature-screen" id="ussdScreen">
+      <div>
+        <span style="color: #888;">VERIFY HEALTH USSD</span><br>
+        --------------------<br>
+        Welcome to Motherwell Clinic.<br><br>
+        Dial *134*123# to check in.<br><br>
+        <span style="color: #eab308;">[Press 1 to Dial]</span>
+      </div>
+      <div style="font-size: 10px; color: #666; text-align: right;">GPS: Clinic Verified</div>
+    </div>
+
+    <!-- T9 KEYPAD -->
+    <div class="keypad">
+      <div class="key-btn" onclick="pressUSSD('1')">1<br><span style="font-size:8px; color:#888;">. , -</span></div>
+      <div class="key-btn" onclick="pressUSSD('2')">2<br><span style="font-size:8px; color:#888;">ABC</span></div>
+      <div class="key-btn" onclick="pressUSSD('3')">3<br><span style="font-size:8px; color:#888;">DEF</span></div>
+      <div class="key-btn" onclick="pressUSSD('4')">4<br><span style="font-size:8px; color:#888;">GHI</span></div>
+      <div class="key-btn" onclick="pressUSSD('5')">5<br><span style="font-size:8px; color:#888;">JKL</span></div>
+      <div class="key-btn" onclick="pressUSSD('6')">6<br><span style="font-size:8px; color:#888;">MNO</span></div>
+      <div class="key-btn" onclick="pressUSSD('7')">7<br><span style="font-size:8px; color:#888;">PQRS</span></div>
+      <div class="key-btn" onclick="pressUSSD('8')">8<br><span style="font-size:8px; color:#888;">TUV</span></div>
+      <div class="key-btn" onclick="pressUSSD('9')">9<br><span style="font-size:8px; color:#888;">WXYZ</span></div>
+      <div class="key-btn" style="color: #ef4444;" onclick="resetUSSD()">CLR</div>
+      <div class="key-btn" onclick="pressUSSD('0')">0</div>
+      <div class="key-btn" style="color: #22c55e;" onclick="pressUSSD('SEND')">SEND</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let screenHistory = ['screen1'];
+
+  function goToScreen(screenId) {
+    const targetId = typeof screenId === 'number' ? 'screen' + screenId : screenId;
+    const currentScreen = screenHistory[screenHistory.length - 1];
+    
+    if (currentScreen !== targetId) {
+      screenHistory.push(targetId);
+    }
+
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(targetId).classList.add('active');
+  }
+
+  function goBack() {
+    if (screenHistory.length > 1) {
+      screenHistory.pop(); // Remove current screen
+      const prevScreen = screenHistory[screenHistory.length - 1];
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(prevScreen).classList.add('active');
+    }
+  }
+
+  function resetToStart() {
+    screenHistory = ['screen1'];
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen1').classList.add('active');
+  }
+
+  function checkInPatient(isVisitor) {
+    const badge = document.getElementById('mobilityBadge');
+    if (isVisitor) {
+      goToScreen('screenMobilityCheck');
+    } else {
+      badge.style.display = 'none';
+      document.getElementById('patientSub').innerText = 'Josephine Sentsho • Motherwell Clinic Resident';
+      goToScreen('screen2');
+    }
+  }
+
+  function selectMobilityType(type) {
+    const badge = document.getElementById('mobilityBadge');
+    badge.style.display = 'block';
+    if (type === 'guest') {
+      badge.innerText = '🧳 Guest Pickup Authorized';
+      badge.style.background = '#dbeafe';
+      badge.style.color = '#1e40af';
+    } else {
+      badge.innerText = '🏡 Permanent Transfer Initiated';
+      badge.style.background = '#dcfce7';
+      badge.style.color = '#166534';
+    }
+    goToScreen('screen2');
+  }
+
+  function submitNurseVitals() {
+    const bp = document.getElementById('nurseBP').value;
+    const glucoseVal = parseFloat(document.getElementById('nurseGlucose').value) || 0;
+    const reasonElem = document.getElementById('emergencyReason');
+
+    let sys = 0;
+    if (bp.includes('/')) {
+      sys = parseInt(bp.split('/')[0]) || 0;
+    } else {
+      sys = parseInt(bp) || 0;
+    }
+
+    // CHECK EMERGENCY THRESHOLDS
+    if (sys >= 160 && glucoseVal >= 11.1) {
+      reasonElem.innerText = `⚠️ Critical: High BP (${bp} mmHg) & High Glucose (${glucoseVal} mmol/L)`;
+      goToScreen('ticketEmergency');
+    } else if (sys >= 160) {
+      reasonElem.innerText = `⚠️ Critical: High BP (${bp} mmHg)`;
+      goToScreen('ticketEmergency');
+    } else if (glucoseVal >= 11.1) {
+      reasonElem.innerText = `⚠️ Critical: High Glucose (${glucoseVal} mmol/L)`;
+      goToScreen('ticketEmergency');
+    } else {
+      goToScreen('ticketMeds');
+    }
+  }
+
+  /* USSD SIMULATOR LOGIC */
+  let ussdStep = 0;
+  function pressUSSD(key) {
+    const scr = document.getElementById('ussdScreen');
+    if (ussdStep === 0 && (key === '1' || key === 'SEND')) {
+      scr.innerHTML = `<div>VERIFY HEALTH USSD<br>--------------------<br>1. Chronic Repeat Pickup<br>2. Doctor Consultation<br>3. HIV Counseling<br><br>Reply with number:</div>`;
+      ussdStep = 1;
+    } else if (ussdStep === 1 && key === '1') {
+      scr.innerHTML = `<div>TICKET: P-104<br>Est Wait: ~12m (3 ahead)<br>--------------------<br>Meds: Amlodipine 10mg (1x daily morning)<br><br>Next Date: 12 Sep 2026<br>SMS sent.</div>`;
+      ussdStep = 2;
+    } else if (ussdStep === 1 && key === '2') {
+      scr.innerHTML = `<div>TICKET ISSUED<br>--------------------<br>Ticket: C-205<br>Est Wait: ~28 mins<br>Ahead: 5 Patients<br><br>SMS pre-alert will trigger shortly.</div>`;
+      ussdStep = 2;
+    }
+  }
+
+  function resetUSSD() {
+    ussdStep = 0;
+    document.getElementById('ussdScreen').innerHTML = `<div>VERIFY HEALTH USSD<br>--------------------<br>Welcome to Motherwell Clinic.<br><br>Dial *134*123# to check in.<br><br><span style="color: #eab308;">[Press 1 to Dial]</span></div><div style="font-size: 10px; color: #666; text-align: right;">GPS: Clinic Verified</div>`;
+  }
+</script>
+
+</body>
+</html>
